@@ -1,1 +1,3 @@
-# vkr-script
+# VKR
+## Description
+This project contains my graduation work.
