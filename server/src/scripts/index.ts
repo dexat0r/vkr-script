@@ -1,53 +1,51 @@
 import Web3 from "web3";
 import * as dotenv from 'dotenv';
+import { Transaction } from "web3-core"
 
 dotenv.config();
 
 export default class Web3Client {
     
     web3: Web3;
-    updateTime = 1;
+    updateTime = 15;
     
     constructor() {
-        const apiKey = process.env.INFURA_KEY;
         this.web3 = new Web3(`http://localhost:8545`);
         this.web3.eth.getChainId().then((value) => {
             console.log(`Web3 client initialized at chain with id ${value.toLocaleString()}`)
         })
     }
 
-    async getAllUserTransactions(fromBlock: number, toBlock: number, address: string) {
+    async getAllUserTransactions(fromBlock: number, toBlock: number, _address: string) {
+        const address = this.web3.utils.toChecksumAddress(_address);
         try {
             console.log(`Getting transactions from address ${address}. From: ${fromBlock}. To: ${toBlock}`);
-            const txs = await this.web3.eth.getPastLogs({
-                fromBlock,
-                toBlock,
-                address
-            });
+            let txs: Transaction[] = []
+            for (let i = fromBlock; i < toBlock; i++) {
+                const block = await this.web3.eth.getBlock(i);
+                if (block != null && block.transactions != null) {
+                    for (let j = 0; j < block.transactions.length; j++) {
+                        const tx = await this.web3.eth.getTransaction(block.transactions[j]);
+                        if (tx.from == address || tx.to == address) {
+                            txs.push(tx);
+                        }
+                    }
+                }
+            }
             return txs;
         } catch (error) {
-            // console.log(error)
+            console.log(error)
             return [];
         }
     }
 
     async calculateBlockNumbers(from: number, to: number): Promise<Array<number>> {
         const blocks: number[] = [];
-        const currentBlock = await this.web3.eth.getBlockNumber();
-        let i = currentBlock;
-        do {
-            const checkingBlock = await this.web3.eth.getBlock(i);
-
-            console.log(checkingBlock.timestamp)
-            i--;
-            if (i == 0) break;
-        } while(true);
-        const currentTime = Date.now();
         blocks.push(
-            currentBlock - Math.floor((Math.abs(currentTime - from) / (this.updateTime)) / 1000)
+            await this.getClosestBlock(from)
         );
         blocks.push(
-            currentBlock - Math.floor((Math.abs(currentTime - to) / (this.updateTime)) / 1000)
+            await this.getClosestBlock(to)
         );
         return blocks;
     }
@@ -74,7 +72,9 @@ export default class Web3Client {
                 break;
             }
         }
+        return previousBlock
     }
+
     
 
 
