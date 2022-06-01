@@ -24,7 +24,6 @@ export default class Web3Client {
     updateTime = 5;
 
     constructor() {
-        const apiKey = process.env.INFURA_KEY;
         this.web3 = new Web3(`http://localhost:8545`);
         this.web3.eth.getChainId().then((value) => {
             console.log(
